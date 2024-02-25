@@ -1,5 +1,4 @@
-// import { useStore } from './hooks/useStore'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import styles from './App.module.scss'
 
 const sendFormData = (formData) => {
@@ -7,28 +6,13 @@ const sendFormData = (formData) => {
 }
 
 const initialState = {
-  login: null,
-  password: null,
-  email: null,
+  email: '',
+  password: '',
+  repeatPassword: '',
 }
 
 const useStore = () => {
   const [state, setState] = useState(initialState)
-
-  // const { login } = initialState
-
-  // if (login !== null) {
-  //   let error = null
-
-  //   if (!/^[\w\-_]*$/.test(login)) {
-  //     error =
-  //       'Логин введен неверно. Допустимые символы: латиница, цифры, нижнее подчеркивание и тире'
-  //   } else if (login.length > 10) {
-  //     error = 'Допустимое количество символов не больше 10 '
-  //   }
-
-  //   setLoginError(error)
-  // }
 
   return {
     getState: () => state,
@@ -40,76 +24,143 @@ const useStore = () => {
 
 export const App = () => {
   const { getState, updateState } = useStore()
+  const [passwordError, setPasswordError] = useState(null)
+  const [repeatPasswordError, setRepeatPasswordError] = useState(null)
+  const [validationOK, setBalidationOK] = useState(false)
 
-  const [loginError, setLoginError] = useState(null)
+  const submitButtonRef = useRef(null)
 
-  // const onLoginBlur = () => {
-  //   if (login.length < 3) {
-  //     const errorMes = 'Неверный логин. Должно быть не меньше 3-х сиволов'
-  //     setLoginError(errorMes)
-  //   }
-  // }
+  const { email, password, repeatPassword } = getState()
+
+  const isEmptyFields = email === '' || password === '' || repeatPassword === ''
+
+  if (
+    validationOK === false &&
+    !isEmptyFields &&
+    passwordError === null &&
+    repeatPasswordError === null &&
+    password.length === repeatPassword.length
+  ) {
+    setBalidationOK(true)
+    submitButtonRef.current.focus()
+  }
+
+  if (
+    validationOK === true &&
+    !isEmptyFields &&
+    (passwordError !== null || repeatPasswordError !== null)
+  ) {
+    setBalidationOK(false)
+  }
 
   const onSubmit = (event) => {
     event.preventDefault()
     sendFormData(getState())
   }
 
-  const { email, login, password } = getState()
+  const onPasswordChange = (target) => {
+    updateState('password', target.value)
+
+    const newPassword = target.value
+
+    if (newPassword !== '') {
+      let error = null
+
+      if (!/^[\w\-_]*$/.test(newPassword)) {
+        error =
+          'Пароль введен неверно. Допустимые символы: латиница, цифры, нижнее подчеркивание и тире'
+      } else if (newPassword.length > 10) {
+        error = 'Допустимое количество символов не больше 10 '
+      }
+
+      setPasswordError(error)
+    }
+  }
+
+  const onBlurPassword = (target) => {
+    const { repeatPassword } = getState()
+    const newPassword = target.value
+
+    if (repeatPassword !== '') {
+      let error = null
+
+      if (newPassword !== repeatPassword) {
+        error = 'Пароли не совпадают'
+      }
+
+      setRepeatPasswordError(error)
+    }
+  }
+
+  const onBlurRepeatPassword = (target) => {
+    const { password } = getState()
+    const newRepeatPassword = target.value
+
+    if (newRepeatPassword !== '') {
+      let error = null
+
+      if (newRepeatPassword !== password) {
+        error = 'Пароли не совпадают'
+      }
+
+      setRepeatPasswordError(error)
+    }
+  }
 
   return (
     <>
       <div className={styles.app}>
-        <div> Большое изображение</div>
+        <div> Скоро тут будет большое изображение</div>
         <form className={styles.registrationForm} onSubmit={onSubmit}>
-          {loginError && <div className={styles.messageError}>{loginError}</div>}
-          <input
-            className={styles.formField}
-            id="login"
-            name="login"
-            type="text"
-            value={login}
-            placeholder="Введите логин"
-            onChange={({ target }) => {
-              updateState('login', target.value)
-            }}
-            // onBlur={onLoginBlur}
-          />
-          {/* <label htmlFor="login" className={styles.formLabel}>
-            Введите логин
-          </label> */}
-
-          <input
-            className={styles.formField}
-            id="password"
-            name="password"
-            type="password"
-            value={password}
-            placeholder="Введите пароль"
-            onChange={({ target }) => {
-              updateState('password', target.value)
-            }}
-            // onBlur={onLoginBlur}
-          />
-          {/* <label htmlFor="password" className={styles.formLabel}>
-            Введите пароль
-          </label> */}
-
           <input
             className={styles.formField}
             name="email"
             type="email"
+            autoComplete="email"
             value={email}
             placeholder="Введите ваш email"
             onChange={({ target }) => {
               updateState('email', target.value)
             }}
-            // onBlur={onLoginBlur}
           />
+          <input
+            className={styles.formField}
+            name="password"
+            autoComplete="new-password"
+            type="password"
+            value={password}
+            placeholder="Введите пароль"
+            onChange={({ target }) => {
+              onPasswordChange(target)
+            }}
+            onBlur={({ target }) => {
+              onBlurPassword(target)
+            }}
+          />
+          {passwordError && <div className={styles.messageError}>{passwordError}</div>}
+
+          <input
+            className={styles.formField}
+            name="repeatPassword"
+            autoComplete="new-password"
+            type="password"
+            value={repeatPassword}
+            placeholder="Повторите ваш пароль"
+            onChange={({ target }) => {
+              updateState('repeatPassword', target.value)
+            }}
+            onBlur={({ target }) => {
+              onBlurRepeatPassword(target)
+            }}
+          />
+          {repeatPasswordError && (
+            <div className={styles.messageError}>{repeatPasswordError}</div>
+          )}
           <button
             className={styles.formButton}
             type="submit"
-            disabled={loginError !== null}
+            disabled={validationOK === false}
+            ref={submitButtonRef}
           >
             Зарегистрироваться
           </button>
