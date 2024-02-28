@@ -1,167 +1,122 @@
-import { useRef, useState } from 'react'
+import * as yup from 'yup'
+import { useRef } from 'react'
+import { useForm } from 'react-hook-form'
+import { yupResolver } from '@hookform/resolvers/yup'
 import styles from './App.module.scss'
 
-const sendFormData = (formData) => {
-  console.log(formData)
-}
-
-const initialState = {
-  email: '',
-  password: '',
-  repeatPassword: '',
-}
-
-const useStore = () => {
-  const [state, setState] = useState(initialState)
-
-  return {
-    getState: () => state,
-    updateState: (fieldName, newValue) => {
-      setState({ ...state, [fieldName]: newValue })
-    },
-  }
+const errorsTexts = {
+  emailValueError:
+    'Email введен неверно. Email должен содержать символ @ и не иметь пробелов',
+  passwordValueError:
+    'Пароль введен неверно. Допустимые символы: латиница, цифры, нижнее подчеркивание и тире',
+  passwordMaxLengthError: 'Допустимое количество символов не больше 10',
+  passwordsNotMatches: 'Пароли не совпадают',
+  passwordMinLengthError: 'Пароль должен быть не меньше 3-х сиволов',
 }
 
 export const App = () => {
-  const { getState, updateState } = useStore()
-  const [passwordError, setPasswordError] = useState(null)
-  const [repeatPasswordError, setRepeatPasswordError] = useState(null)
-  const [validationOK, setBalidationOK] = useState(false)
+  const fieldsScheme = yup.object().shape({
+    email: yup.string().matches(/^[\w]*@[a-z]*.[a-z]{2,3}$/, errorsTexts.emailValueError),
+    password: yup
+      .string()
+      .matches(/^[\w\-_]*$/, errorsTexts.passwordValueError)
+      .min(3, errorsTexts.passwordMinLengthError)
+      .max(10, errorsTexts.passwordMaxLengthError),
+    repeatPassword: yup
+      .string()
+      .test(
+        'isMatchesWithPassword',
+        errorsTexts.passwordsNotMatches,
+        (password) => password === getValues('password'),
+      ),
+  })
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    getValues,
+  } = useForm({
+    defaultValues: {
+      email: '',
+      password: '',
+      repeatPassword: '',
+    },
+    resolver: yupResolver(fieldsScheme),
+  })
+
+  const isEmptyFields =
+    getValues('email') === '' ||
+    getValues('password') === '' ||
+    getValues('repeatPassword') === ''
+
+  const emailError = errors.email?.message || null
+  const passwordError = errors.password?.message || null
+  const repeatPasswordError = errors.repeatPassword?.message || null
 
   const submitButtonRef = useRef(null)
+  const validationOk =
+    passwordError === null && repeatPasswordError === null && emailError === null
 
-  const { email, password, repeatPassword } = getState()
-
-  const isEmptyFields = email === '' || password === '' || repeatPassword === ''
-
-  if (
-    validationOK === false &&
-    !isEmptyFields &&
-    passwordError === null &&
-    repeatPasswordError === null &&
-    password.length === repeatPassword.length
-  ) {
-    setBalidationOK(true)
+  if (validationOk === true && !isEmptyFields) {
     submitButtonRef.current.focus()
   }
 
-  if (
-    validationOK === true &&
-    !isEmptyFields &&
-    (passwordError !== null || repeatPasswordError !== null)
-  ) {
-    setBalidationOK(false)
+  const onSubmit = (formData) => {
+    console.log(formData)
   }
 
-  const onSubmit = (event) => {
-    event.preventDefault()
-    sendFormData(getState())
+  const showErrorMessage = (message) => {
+    return <div className={styles.messageError}>{message}</div>
   }
 
-  const onPasswordChange = (target) => {
-    updateState('password', target.value)
-
-    const newPassword = target.value
-
-    if (newPassword !== '') {
-      let error = null
-
-      if (!/^[\w\-_]*$/.test(newPassword)) {
-        error =
-          'Пароль введен неверно. Допустимые символы: латиница, цифры, нижнее подчеркивание и тире'
-      } else if (newPassword.length > 10) {
-        error = 'Допустимое количество символов не больше 10 '
-      }
-
-      setPasswordError(error)
-    }
-  }
-
-  const onBlurPassword = (target) => {
-    const { repeatPassword } = getState()
-    const newPassword = target.value
-
-    if (repeatPassword !== '') {
-      let error = null
-
-      if (newPassword !== repeatPassword) {
-        error = 'Пароли не совпадают'
-      }
-
-      setRepeatPasswordError(error)
-    }
-  }
-
-  const onBlurRepeatPassword = (target) => {
-    const { password } = getState()
-    const newRepeatPassword = target.value
-
-    if (newRepeatPassword !== '') {
-      let error = null
-
-      if (newRepeatPassword !== password) {
-        error = 'Пароли не совпадают'
-      }
-
-      setRepeatPasswordError(error)
-    }
+  const createInputPasswordForm = (name, placeholder) => {
+    return (
+      <input
+        className={styles.formField}
+        name={name}
+        autoComplete="new-password"
+        type="password"
+        placeholder={placeholder}
+        {...register(name)}
+      />
+    )
   }
 
   return (
     <>
+      {' '}
+      {/* <img
+        className={styles.cosmo}
+        src="https://static.vecteezy.com/system/resources/previews/027/291/162/non_2x/spaceman-astronaut-no-background-applicable-to-any-context-great-for-print-on-demand-merchandise-free-png.png"
+        alt="whte_waves"
+      /> */}
       <div className={styles.app}>
-        <div> Скоро тут будет большое изображение</div>
-        <form className={styles.registrationForm} onSubmit={onSubmit}>
+        <div>
+          <img
+            className={styles.cosmo}
+            src="https://static.vecteezy.com/system/resources/previews/027/291/162/non_2x/spaceman-astronaut-no-background-applicable-to-any-context-great-for-print-on-demand-merchandise-free-png.png"
+            alt="whte_waves"
+          />
+        </div>
+        <form className={styles.registrationForm} onSubmit={handleSubmit(onSubmit)}>
           <input
             className={styles.formField}
             name="email"
-            type="email"
+            type="text"
             autoComplete="email"
-            value={email}
             placeholder="Введите ваш email"
-            onChange={({ target }) => {
-              updateState('email', target.value)
-            }}
+            {...register('email')}
           />
-          <input
-            className={styles.formField}
-            name="password"
-            autoComplete="new-password"
-            type="password"
-            value={password}
-            placeholder="Введите пароль"
-            onChange={({ target }) => {
-              onPasswordChange(target)
-            }}
-            onBlur={({ target }) => {
-              onBlurPassword(target)
-            }}
-          />
-          {passwordError && <div className={styles.messageError}>{passwordError}</div>}
+          {emailError && showErrorMessage(emailError)}
 
-          <input
-            className={styles.formField}
-            name="repeatPassword"
-            autoComplete="new-password"
-            type="password"
-            value={repeatPassword}
-            placeholder="Повторите ваш пароль"
-            onChange={({ target }) => {
-              updateState('repeatPassword', target.value)
-            }}
-            onBlur={({ target }) => {
-              onBlurRepeatPassword(target)
-            }}
-          />
-          {repeatPasswordError && (
-            <div className={styles.messageError}>{repeatPasswordError}</div>
-          )}
-          <button
-            className={styles.formButton}
-            type="submit"
-            disabled={validationOK === false}
-            ref={submitButtonRef}
-          >
+          {createInputPasswordForm('password', 'Введите пароль')}
+          {passwordError && showErrorMessage(passwordError)}
+
+          {createInputPasswordForm('repeatPassword', 'Повторите ваш пароль')}
+          {repeatPasswordError && showErrorMessage(repeatPasswordError)}
+
+          <button className={styles.formButton} type="submit" ref={submitButtonRef}>
             Зарегистрироваться
           </button>
         </form>
