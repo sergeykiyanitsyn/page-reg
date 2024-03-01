@@ -1,0 +1,18 @@
+import { useState } from 'react'
+
+const initialState = {
+  emailError: null,
+  passwordError: null,
+  repeatPasswordError: null,
+}
+
+export const useErrorsStore = () => {
+  const [stateErrors, setStateErrors] = useState(initialState)
+
+  return {
+    getErrorsState: () => stateErrors,
+    updatErrorseState: (fieldName, newValue) => {
+      setStateErrors({ ...stateErrors, [fieldName]: newValue })
+    },
+  }
+}

@@ -1,35 +1,24 @@
 import { useRef, useState } from 'react'
 import styles from './App.module.scss'
+import { useStore } from './hooks/useStore'
+import { errorsTexts } from './hooks/messageErrors'
+import { useErrorsStore } from './hooks/useErrorsStore'
 
 const sendFormData = (formData) => {
   console.log(formData)
 }
 
-const initialState = {
-  email: '',
-  password: '',
-  repeatPassword: '',
-}
-
-const useStore = () => {
-  const [state, setState] = useState(initialState)
-
-  return {
-    getState: () => state,
-    updateState: (fieldName, newValue) => {
-      setState({ ...state, [fieldName]: newValue })
-    },
-  }
-}
+const URL_SRC =
+  'https://static.vecteezy.com/system/resources/previews/027/291/162/non_2x/spaceman-astronaut-no-background-applicable-to-any-context-great-for-print-on-demand-merchandise-free-png.png'
 
 export const App = () => {
   const { getState, updateState } = useStore()
-  const [passwordError, setPasswordError] = useState(null)
-  const [repeatPasswordError, setRepeatPasswordError] = useState(null)
+  const { getErrorsState, updatErrorseState } = useErrorsStore()
   const [validationOK, setBalidationOK] = useState(false)
 
   const submitButtonRef = useRef(null)
 
+  const { emailError, passwordError, repeatPasswordError } = getErrorsState()
   const { email, password, repeatPassword } = getState()
 
   const isEmptyFields = email === '' || password === '' || repeatPassword === ''
@@ -37,6 +26,7 @@ export const App = () => {
   if (
     validationOK === false &&
     !isEmptyFields &&
+    emailError === null &&
     passwordError === null &&
     repeatPasswordError === null &&
     password.length === repeatPassword.length
@@ -48,7 +38,7 @@ export const App = () => {
   if (
     validationOK === true &&
     !isEmptyFields &&
-    (passwordError !== null || repeatPasswordError !== null)
+    (emailError === null || passwordError !== null || repeatPasswordError !== null)
   ) {
     setBalidationOK(false)
   }
@@ -58,22 +48,34 @@ export const App = () => {
     sendFormData(getState())
   }
 
+  const onEmailBlur = (target) => {
+    const email = target.value
+
+    if (email !== '') {
+      let error = null
+
+      if (!/^[\w]*@[a-z]*.[a-z]{2,3}$/.test(email)) {
+        error = errorsTexts.emailValueError
+      }
+
+      updatErrorseState('emailError', error)
+    }
+  }
+
   const onPasswordChange = (target) => {
     updateState('password', target.value)
-
     const newPassword = target.value
 
     if (newPassword !== '') {
       let error = null
 
       if (!/^[\w\-_]*$/.test(newPassword)) {
-        error =
-          'Пароль введен неверно. Допустимые символы: латиница, цифры, нижнее подчеркивание и тире'
+        error = errorsTexts.passwordValueError
       } else if (newPassword.length > 10) {
-        error = 'Допустимое количество символов не больше 10 '
+        error = errorsTexts.passwordMaxLengthError
       }
 
-      setPasswordError(error)
+      updatErrorseState('passwordError', error)
     }
   }
 
@@ -85,10 +87,12 @@ export const App = () => {
       let error = null
 
       if (newPassword !== repeatPassword) {
-        error = 'Пароли не совпадают'
+        error = errorsTexts.passwordsNotMatches
+      } else if (newPassword.length < 3) {
+        error = errorsTexts.passwordMinLengthError
       }
 
-      setRepeatPasswordError(error)
+      updatErrorseState('passwordError', error)
     }
   }
 
@@ -100,29 +104,37 @@ export const App = () => {
       let error = null
 
       if (newRepeatPassword !== password) {
-        error = 'Пароли не совпадают'
+        error = errorsTexts.passwordsNotMatches
       }
 
-      setRepeatPasswordError(error)
+      updatErrorseState('repeatPasswordError', error)
     }
   }
 
   return (
     <>
       <div className={styles.app}>
-        <div> Скоро тут будет большое изображение</div>
+        <div>
+          <img className={styles.cosmo} src={URL_SRC} alt="whte_waves" />
+        </div>
         <form className={styles.registrationForm} onSubmit={onSubmit}>
           <input
             className={styles.formField}
             name="email"
-            type="email"
+            type="text"
             autoComplete="email"
             value={email}
             placeholder="Введите ваш email"
             onChange={({ target }) => {
               updateState('email', target.value)
             }}
+            onBlur={({ target }) => {
+              onEmailBlur(target)
+            }}
           />
+
+          {emailError && <div className={styles.messageError}>{emailError}</div>}
+
           <input
             className={styles.formField}
             name="password"
@@ -137,6 +149,7 @@ export const App = () => {
               onBlurPassword(target)
             }}
           />
+
           {passwordError && <div className={styles.messageError}>{passwordError}</div>}
 
           <input
